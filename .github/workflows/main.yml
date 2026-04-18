@@ -8,44 +8,43 @@ jobs:
     runs-on: windows-latest
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
       - name: Enable RDP
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
-      
-      - name: Set User Password
-        run: |
           net user runneradmin P@ssw0rd!
       
       - name: Download ngrok
         run: |
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
-          Expand-Archive ngrok.zip -DestinationPath .
+          Expand-Archive -Path "ngrok.zip" -DestinationPath "." -Force
       
       - name: Setup ngrok
         run: |
-          .\ngrok\ngrok.exe config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+          .\ngrok.exe config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
       
       - name: Start ngrok Tunnel
         run: |
-          Start-Process -NoNewWindow -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389"
-          Start-Sleep -Seconds 5
+          Start-Process -NoNewWindow -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389"
+          Start-Sleep -Seconds 3
       
       - name: Get ngrok Tunnel Info
         run: |
-          $response = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels"
+          $response = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels"
           $public_url = $response.tunnels[0].public_url -replace "tcp://", ""
-          Write-Host "=============================================="
-          Write-Host "RDP Address: $public_url"
-          Write-Host "Username: runneradmin"
-          Write-Host "Password: P@ssw0rd!"
-          Write-Host "=============================================="
+          Write-Host "==============================================" -ForegroundColor Green
+          Write-Host "RDP Address: $public_url" -ForegroundColor Cyan
+          Write-Host "Username: runneradmin" -ForegroundColor Yellow
+          Write-Host "Password: P@ssw0rd!" -ForegroundColor Yellow
+          Write-Host "==============================================" -ForegroundColor Green
       
       - name: Keep Session Alive
         run: |
-          Write-Host "RDP is running. Session will timeout after 6 hours."
-          Start-Sleep -Seconds 21600
+          Write-Host "RDP is running. Will stay alive for 6 hours."
+          $counter = 0
+          while ($counter -lt 360) {
+            Write-Host "Session alive: $counter minutes elapsed"
+            Start-Sleep -Seconds 60
+            $counter++
+          }
